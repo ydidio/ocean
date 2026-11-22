@@ -21,6 +21,7 @@ class ScenarioDefinition(BaseModel):
     kinds: list[str] = Field(default_factory=list)
     routes: list[str] = Field(min_length=1)
     blueprints: str | None = None
+    integration_config: dict[str, Any] | None = None
     port_app_config_overrides: list[dict[str, Any]] | None = None
     expect: ScenarioExpect | None = None
 
