@@ -1,3 +1,4 @@
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -25,7 +26,9 @@ def port() -> FakePort:
 
 
 def test_apply_port_mcp_session_secrets_requires_token() -> None:
-    run = make_node_run("wfnr_1", "create_session", {"prompt": "hi", "enablePortMcp": True})
+    run = make_node_run(
+        "wfnr_1", "create_session", {"prompt": "hi", "enablePortMcp": True}
+    )
     with pytest.raises(ActionExecutionError, match="enablePortMcp requires"):
         apply_port_mcp_session_secrets(
             {}, run, True, DEFAULT_PORT_MCP_SESSION_SECRET_KEY
@@ -37,7 +40,7 @@ def test_apply_port_mcp_session_secrets_uses_configured_key() -> None:
     run.execution_identity = ResolvedExecutionIdentity(
         type="actor", identifier="user@example.com"
     )
-    body: dict = {}
+    body: dict[str, Any] = {}
     with patch("actions.port_mcp_utils.get_run_access_token", return_value="port.jwt"):
         apply_port_mcp_session_secrets(body, run, True, "MCP_CUSTOM")
 
