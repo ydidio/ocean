@@ -12,12 +12,6 @@ from clients.parsing import (
 
 
 class DevinSessions:
-    """Session operations shared by the action executors and the session tracker.
-
-    Kept apart from `DevinClient` so the client stays a generic transport and
-    the resource-specific paths and payload shapes live in one place.
-    """
-
     def __init__(self, client: DevinClient) -> None:
         self.client = client
 
@@ -55,24 +49,20 @@ class DevinSessions:
     async def list_messages_after(
         self, session_id: str, after: str | None
     ) -> tuple[list[SessionMessage], str | None]:
-        """Return every message after `after` (all messages when it is `None`)
-        and the cursor to resume from next time.
-
-        The returned cursor is `after` itself when no new page was produced, so
-        a caller can always store it without losing its place.
-        """
+        # When no page is returned, keep `after` so the cursor does not move backward.
         messages: list[SessionMessage] = []
         cursor = after
-        while True:
-            payload = await self.client._fetch_page(
-                endpoints.session_messages(session_id), after=cursor
-            )
+        params = {"after": after} if after else None
+        async for payload in self.client.paginate(
+            endpoints.session_messages(session_id),
+            params=params,
+            envelopes=True,
+        ):
             for item in payload.get("items") or []:
                 if message := parse_session_message_best_effort(item):
                     messages.append(message)
             cursor = payload.get("end_cursor") or cursor
-            if not payload.get("has_next_page") or not payload.get("end_cursor"):
-                return messages, cursor
+        return messages, cursor
 
     async def append_tags(self, session_id: str, tags: list[str]) -> list[str]:
         data = await self.client.send_api_request(

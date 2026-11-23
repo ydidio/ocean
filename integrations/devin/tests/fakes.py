@@ -1,10 +1,3 @@
-"""In-memory stand-ins for the Devin API and Port's run API.
-
-The tracker and executors are exercised against these rather than call-level
-mocks so tests can assert on end state (tags left on a session, what a run
-reported, which logs it got) the way a real restart would observe it.
-"""
-
 from collections.abc import AsyncGenerator, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -31,7 +24,7 @@ OCEAN_MODULES = (
     "actions.send_message_executor.ocean",
     "actions.terminate_session_executor.ocean",
     "actions.archive_session_executor.ocean",
-    "actions.catalog_utils.ocean",
+    "actions.utils.ocean",
     "core.tracking.session_tracker.ocean",
 )
 

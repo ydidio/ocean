@@ -10,58 +10,50 @@ from actions.archive_session_executor import ArchiveSessionExecutor
 from actions.create_session_executor import CreateSessionExecutor
 from actions.send_message_executor import SendMessageExecutor
 from actions.terminate_session_executor import TerminateSessionExecutor
+from clients import endpoints
+from clients.client_factory import create_devin_client
+from core.sessions_query import build_sessions_query
 from core.tracking.session_tracker import create_session_tracker
-from exporter_factory import (
-    create_knowledge_notes_exporter,
-    create_playbooks_exporter,
-    create_secrets_exporter,
-    create_sessions_exporter,
-)
-from core.exporters.options import ListPlaybooksOptions, SessionsExportOptions
 from integration import ObjectKind, PlaybookResourceConfig, SessionResourceConfig
 
 
 @ocean.on_resync(ObjectKind.SESSION)
 async def on_resync_sessions(kind: str) -> ASYNC_GENERATOR_RESYNC_TYPE:
     selector = cast(SessionResourceConfig, event.resource_config).selector
-    exporter = create_sessions_exporter()
-    options: SessionsExportOptions = {
-        "include_archived": selector.include_archived,
-        "created_after_days": selector.created_after_days,
-        "origins": list(selector.origins) if selector.origins else None,
-        "only_managed_by_port": selector.only_managed_by_port,
-    }
-    async for page in exporter.get_paginated_resources(options):
-        if page:
-            yield page
+    params = build_sessions_query(
+        include_archived=selector.include_archived,
+        created_after_days=selector.created_after_days,
+        origins=list(selector.origins) if selector.origins else None,
+        only_managed_by_port=selector.only_managed_by_port,
+    )
+    client = create_devin_client()
+    async for page in client.paginate(endpoints.SESSIONS, params=params):
+        yield page
 
 
 @ocean.on_resync(ObjectKind.PLAYBOOK)
 async def on_resync_playbooks(kind: str) -> ASYNC_GENERATOR_RESYNC_TYPE:
     selector = cast(PlaybookResourceConfig, event.resource_config).selector
-    exporter = create_playbooks_exporter()
-    options: ListPlaybooksOptions = {
-        "include_enterprise": selector.include_enterprise,
-    }
-    async for page in exporter.get_paginated_resources(options):
-        if page:
-            yield page
+    client = create_devin_client()
+    async for page in client.paginate(
+        endpoints.PLAYBOOKS,
+        params={"include_enterprise": selector.include_enterprise},
+    ):
+        yield page
 
 
 @ocean.on_resync(ObjectKind.KNOWLEDGE_NOTE)
 async def on_resync_knowledge_notes(kind: str) -> ASYNC_GENERATOR_RESYNC_TYPE:
-    exporter = create_knowledge_notes_exporter()
-    async for page in exporter.get_paginated_resources():
-        if page:
-            yield page
+    client = create_devin_client()
+    async for page in client.paginate(endpoints.KNOWLEDGE_NOTES):
+        yield page
 
 
 @ocean.on_resync(ObjectKind.SECRET)
 async def on_resync_secrets(kind: str) -> ASYNC_GENERATOR_RESYNC_TYPE:
-    exporter = create_secrets_exporter()
-    async for page in exporter.get_paginated_resources():
-        if page:
-            yield page
+    client = create_devin_client()
+    async for page in client.paginate(endpoints.SECRETS):
+        yield page
 
 
 @ocean.on_start()
